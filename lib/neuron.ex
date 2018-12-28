@@ -32,6 +32,9 @@ defmodule Neuron do
     %{name: "uesteibar"}
     )
 
+  # You can also run persisted queries. Persisted queries are stored on the GraphQL server, you need to provide only query id and variables.
+  iex> Neuron.persisted_query("createUser", %{name: "uesteibar"})
+  ```
   """
 
   @doc """
@@ -98,6 +101,42 @@ defmodule Neuron do
     |> run(options)
   end
 
+ @doc """
+  runs a persisted query to your graphql endpoint.
+
+  ## Example
+
+  ```elixir
+  Neuron.persisted_query("getFilms")
+  ```
+
+  You can pass variables for your query
+
+  ## Example
+
+  ```elixir
+  Neuron.persisted_query("createUser", %{name: "uesteibar"})
+  ```
+
+  You can also overwrite parameters set on `Neuron.Config` by passing them as options.
+
+  ## Example
+
+  ```elixir
+  Neuron.persisted_query("createUser", %{name: "uesteibar"}, url: "https://www.other.com/graphql")
+  ```
+  """
+
+  @spec persisted_query(query_id :: String.t(), variables :: Map.t(), options :: keyword()) ::
+          Neuron.Response.t()
+  def persisted_query(query_id, variables \\ %{}, options \\ []) do
+    query_id
+    |> build_persisted_body()
+    |> insert_variables(variables)
+    |> Poison.encode!()
+    |> run(options)
+  end
+
   defp run(body, options) do
     body
     |> run_query(options)
@@ -112,6 +151,8 @@ defmodule Neuron do
   end
 
   defp build_body(query_string), do: %{query: query_string}
+
+  defp build_persisted_body(query_id), do: %{id: query_id}
 
   defp insert_variables(body, variables) do
     Map.put(body, :variables, variables)

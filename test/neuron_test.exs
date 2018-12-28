@@ -60,4 +60,52 @@ defmodule NeuronTest do
       end
     end
   end
+
+  describe "persisted_query/1" do
+    test "calls the connection with correct url and query string", %{
+      url: url,
+      json_headers: json_headers
+    } do
+      with_mock Connection,
+        post: fn _url, _body, _headers ->
+          {:ok, %{body: ~s/{"data": {"users": []}}/, status_code: 200, headers: []}}
+        end do
+        Neuron.persisted_query("getUsers")
+
+        assert called(
+                 Connection.post(
+                   url,
+                   "{\"variables\":{},\"id\":\"getUsers\"}",
+                   %{headers: json_headers, connection_opts: []}
+                 )
+               )
+      end
+    end
+  end
+
+  describe "persisted_query/2" do
+    test "it takes all configs as arguments", %{json_headers: json_headers} do
+      url = "www.example.com/another/graph"
+      headers = ["X-test-header": 'my_header']
+      connection_opts = [timeout: 50_000]
+
+      with_mock Connection,
+        post: fn _url, _body, _headers ->
+          {:ok, %{body: ~s/{"data": {"users": []}}/, status_code: 200, headers: []}}
+        end do
+        Neuron.persisted_query("getUsers", %{}, url: url, headers: headers, connection_opts: connection_opts)
+
+        assert called(
+                 Connection.post(
+                   url,
+                   "{\"variables\":{},\"id\":\"getUsers\"}",
+                   %{
+                     headers: Keyword.merge(json_headers, headers),
+                     connection_opts: connection_opts
+                    }
+                 )
+               )
+      end
+    end
+  end
 end
